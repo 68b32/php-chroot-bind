@@ -1,5 +1,5 @@
 #!/bin/bash
-_CHROOTS_CMD="ls -1d /home/user/*/www"
+_CHROOTS_CMD="ls -1d /home/www/*/chroot"
 _SYSTEMD_UNIT_DIR="/etc/systemd/system"
 _BIND="\
 	/usr/share/zoneinfo \
@@ -40,21 +40,6 @@ delete_path() {
 
 create_systemd_units() {
 
-	[ ! -f "${_SYSTEMD_UNIT_DIR}/rebindreadonly@.service" ] && \
-	cat <<- END > "${_SYSTEMD_UNIT_DIR}/rebindreadonly@.service" && \
-	echo -e "Created ${_SYSTEMD_UNIT_DIR}/rebindreadonly@.service"
-	# PHP-FPM-CHROOT-BIND
-	[Unit]
-	Description=Remount bind for PHP-FPM chroot readonly
-	DefaultDependencies=no
-	After=%i.mount
-	Before=local-fs.target
-
-	[Service]
-	Type=oneshot
-	ExecStart=/bin/mount -o remount,bind,ro /%I
-	END
-
 	local chroot=""
 	local eChroot=""
 	local bind=""
@@ -66,11 +51,11 @@ create_systemd_units() {
 	echo -e "Created ${_SYSTEMD_UNIT_DIR}/php-chroots.target"
 	# PHP-FPM-CHROOT-BIND
 	[Install]
-	WantedBy=php5-fpm.service
+	WantedBy=php7.0-fpm.service
 
 	[Unit]
 	Description=Bind all binds for all PHP-FPM chroots
-	Before=php5-fpm.service
+	Before=php7.0-fpm.service
 	END
 
 	$_CHROOTS_CMD | while read chroot; do
@@ -94,7 +79,6 @@ create_systemd_units() {
 			# PHP-FPM-CHROOT-BIND
 			[Unit]
 			Description=Bind ${bind} for PHP-FPM chroot ${chroot}
-			Requires=rebindreadonly@${mountpoint}.service
 			Requires=php-chroot-create-mountpoint-file-${eBind}@${eChroot}.service
 			Requires=php-chroot-create-mountpoint-dir-${eBind}@${eChroot}.service
 			BindsTo=php-chroot-${eChroot}.target
@@ -284,9 +268,8 @@ $_CHROOTS_CMD | while read chroot; do
 		if [ "$_OPT_ACTION" = "bind" ] && ! is_bound "${mountpoint}"; then
 			# Create mountpoint (could be directory or file)
 			[ -d "${bind}" ] && mkdir -p "${mountpoint}" || mkdir -p "${chroot}`dirname ${bind}`" && touch "${mountpoint}"
-			# Mount bind and remount to apply ro-option
-			echo -en "\t  "  && mount -v -o "bind"	    "${bind}" "${mountpoint}"
-			echo -en "\tre"  && mount -v -o "bind,remount,ro" "${bind}" "${mountpoint}"
+			# Mount bind read-only
+			echo -en "\t  "  && mount -v -o "bind,ro" "${bind}" "${mountpoint}"
 			continue
 		fi
 
