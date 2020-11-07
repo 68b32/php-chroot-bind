@@ -7,6 +7,7 @@ _BIND="\
 	/dev/zero \
 	/dev/null \
 	/etc/resolv.conf \
+	/etc/hosts \
 	/lib/x86_64-linux-gnu/libnss_dns.so.2 \
 	/usr/share/ca-certificates \
 	/etc/ssl/certs"
@@ -51,11 +52,11 @@ create_systemd_units() {
 	echo -e "Created ${_SYSTEMD_UNIT_DIR}/php-chroots.target"
 	# PHP-FPM-CHROOT-BIND
 	[Install]
-	WantedBy=php7.0-fpm.service
+	WantedBy=php7.4-fpm.service
 
 	[Unit]
 	Description=Bind all binds for all PHP-FPM chroots
-	Before=php7.0-fpm.service
+	Before=php7.4-fpm.service
 	END
 
 	$_CHROOTS_CMD | while read chroot; do
